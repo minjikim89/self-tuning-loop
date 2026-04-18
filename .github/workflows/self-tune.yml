@@ -1,0 +1,54 @@
+name: Self-Tuning Loop (Weekly)
+
+on:
+  schedule:
+    # Every Sunday at 09:00 UTC (18:00 KST)
+    - cron: '0 9 * * 0'
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Domain to analyze and evolve'
+        required: true
+        default: 'email'
+      dry_run:
+        description: 'Preview changes without applying'
+        type: boolean
+        default: true
+
+jobs:
+  self-tune:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - name: Analyze diffs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npm run analyze -- ${{ inputs.domain || 'email' }} 7
+
+      - name: Evolve guidelines
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            npm run evolve -- ${{ inputs.domain || 'email' }} --dry-run
+          else
+            npm run evolve -- ${{ inputs.domain || 'email' }}
+          fi
+
+      - name: Quality score report
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: npm run score -- ${{ inputs.domain || 'email' }}

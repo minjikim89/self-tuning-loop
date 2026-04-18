@@ -1,0 +1,32 @@
+{
+  "name": "self-tuning-loop",
+  "version": "0.1.0",
+  "description": "AI drafts that learn from your edits. Prompt evolution through human edit diffs.",
+  "type": "module",
+  "scripts": {
+    "analyze": "tsx src/analyze.ts --run",
+    "evolve": "tsx src/evolve.ts --run",
+    "score": "tsx src/score.ts --run",
+    "setup": "bash setup.sh"
+  },
+  "keywords": [
+    "ai",
+    "prompt-engineering",
+    "self-improving",
+    "feedback-loop",
+    "llm",
+    "prompt-optimization"
+  ],
+  "author": "Minji Kim",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "dotenv": "^16.5.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "@types/node": "^22.0.0"
+  }
+}
