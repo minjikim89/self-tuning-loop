@@ -1,7 +1,13 @@
 import 'dotenv/config';
 import Anthropic from '@anthropic-ai/sdk';
 
-const client = new Anthropic();
+// Tunable for cron contexts: a stuck request shouldn't block the workflow
+// indefinitely. The SDK already retries 408/409/429/5xx with backoff; we just
+// surface its knobs as env vars so operators can shorten the tail.
+const client = new Anthropic({
+  maxRetries: Number(process.env.ANTHROPIC_MAX_RETRIES || 3),
+  timeout: Number(process.env.ANTHROPIC_TIMEOUT_MS || 60_000),
+});
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 const MAX_TOKENS = Number(process.env.ANTHROPIC_MAX_TOKENS || 8192);
 
