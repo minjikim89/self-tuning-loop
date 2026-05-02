@@ -2,7 +2,9 @@ name: Self-Tuning Loop (Weekly)
 
 on:
   schedule:
-    # Every Sunday at 09:00 UTC (18:00 KST)
+    # Every Sunday at 09:00 UTC (18:00 KST). Scheduled runs are always dry-run;
+    # a human must trigger workflow_dispatch with dry_run=false to actually
+    # write a new guidelines version.
     - cron: '0 9 * * 0'
   workflow_dispatch:
     inputs:
@@ -19,6 +21,14 @@ jobs:
   self-tune:
     runs-on: ubuntu-latest
 
+    env:
+      # Resolve once. Quoting these as shell vars (not direct ${{ }}
+      # interpolation in `run:`) prevents injection via workflow_dispatch input.
+      # DRY_RUN defaults to 'true' for the schedule trigger; only an explicit
+      # workflow_dispatch with dry_run=false produces a real evolve.
+      DOMAIN: ${{ inputs.domain || 'email' }}
+      DRY_RUN: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) && 'false' || 'true' }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -33,7 +43,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: npm run analyze -- ${{ inputs.domain || 'email' }} 7
+        run: npm run analyze -- "$DOMAIN" 7
 
       - name: Evolve guidelines
         env:
@@ -41,14 +51,14 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            npm run evolve -- ${{ inputs.domain || 'email' }} --dry-run
+          if [ "$DRY_RUN" = "false" ]; then
+            npm run evolve -- "$DOMAIN"
           else
-            npm run evolve -- ${{ inputs.domain || 'email' }}
+            npm run evolve -- "$DOMAIN" --dry-run
           fi
 
       - name: Quality score report
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: npm run score -- ${{ inputs.domain || 'email' }}
+        run: npm run score -- "$DOMAIN"
