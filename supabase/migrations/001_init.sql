@@ -50,7 +50,17 @@ create index idx_analysis_domain_pending on analysis_runs(domain, analyzed_at)
   where applied = false;
 create index idx_guidelines_domain_version on guidelines(domain, version desc);
 
--- RLS (enable if using Supabase Auth)
--- alter table drafts enable row level security;
--- alter table analysis_runs enable row level security;
--- alter table guidelines enable row level security;
+-- Row Level Security
+-- All tables are server-side only by default. The service_role key (used by
+-- this project's scripts) bypasses RLS automatically. anon/authenticated
+-- clients are denied — add explicit policies below if you expose any of these
+-- tables to a public Supabase client.
+alter table drafts enable row level security;
+alter table analysis_runs enable row level security;
+alter table guidelines enable row level security;
+
+-- Example: allow authenticated users to read their own drafts.
+-- Add a `user_id uuid` column on drafts first, then uncomment:
+-- create policy "drafts_owner_read" on drafts
+--   for select to authenticated
+--   using (user_id = auth.uid());

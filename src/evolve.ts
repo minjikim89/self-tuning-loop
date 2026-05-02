@@ -48,10 +48,23 @@ export async function evolveGuidelines(domain: string, dryRun = false) {
     .limit(1)
     .single();
 
-  // 4. Generate updated guidelines via LLM
+  // 4. Generate updated guidelines via LLM.
+  // Neutralize closing-tag injection in interpolated content.
+  const escapeTag = (s: string, tag: string) =>
+    s.replace(new RegExp(`</${tag}>`, 'gi'), `<\\/${tag}>`);
+
+  const guidelinesBlock = escapeTag(
+    current?.content ?? '(No existing guidelines)',
+    'guidelines'
+  );
+  const patternsBlock = escapeTag(
+    JSON.stringify(safePatterns, null, 2),
+    'patterns'
+  );
+
   const prompt = PROMPT_TEMPLATE
-    .replace('{current_guidelines}', current?.content ?? '(No existing guidelines)')
-    .replace('{safe_patterns}', JSON.stringify(safePatterns, null, 2))
+    .replace('{current_guidelines}', guidelinesBlock)
+    .replace('{safe_patterns}', patternsBlock)
     .replace('{date}', new Date().toISOString().split('T')[0]);
 
   const updatedContent = await callLLM(prompt);

@@ -31,12 +31,16 @@ export async function analyzeDiffs(domain: string, lookbackDays = 7) {
     return null;
   }
 
+  // Neutralize closing-tag injection in user-controlled fields.
+  const safe = (s: string | null | undefined) =>
+    (s ?? '').replace(/<\/draft>/gi, '<\\/draft>');
+
   const diffSummaries = drafts
     .map((d, i) => {
-      let entry = `### Draft ${i + 1}\n${d.diff_summary}`;
+      let entry = `<draft index="${i + 1}">\n${safe(d.diff_summary)}`;
       if (d.feedback_rating) entry += `\nRating: ${d.feedback_rating}/5`;
-      if (d.feedback_comment) entry += `\nComment: ${d.feedback_comment}`;
-      return entry;
+      if (d.feedback_comment) entry += `\nComment: ${safe(d.feedback_comment)}`;
+      return entry + `\n</draft>`;
     })
     .join('\n\n');
 
