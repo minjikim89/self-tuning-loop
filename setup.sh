@@ -1,5 +1,6 @@
 #!/bin/bash
-set -e
+set -euo pipefail
+umask 077
 
 echo "=== Self-Tuning Loop Setup ==="
 echo ""
@@ -21,18 +22,28 @@ echo "You need a Supabase project. Create one at https://supabase.com/dashboard"
 echo ""
 
 if [ ! -f .env ]; then
-  read -p "Supabase Project URL (https://xxx.supabase.co): " SUPABASE_URL
-  read -p "Supabase Service Role Key: " SUPABASE_SERVICE_KEY
-  read -p "Anthropic API Key: " ANTHROPIC_API_KEY
+  read -r -p "Supabase Project URL (https://xxx.supabase.co): " SUPABASE_URL
+  read -r -s -p "Supabase Service Role Key: " SUPABASE_SERVICE_KEY
+  echo ""
+  read -r -s -p "Anthropic API Key: " ANTHROPIC_API_KEY
+  echo ""
 
-  cat > .env << EOF
+  if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_SERVICE_KEY}" ] || [ -z "${ANTHROPIC_API_KEY}" ]; then
+    echo "Error: all three values are required."
+    exit 1
+  fi
+
+  ( umask 177 && cat > .env << EOF
 SUPABASE_URL=${SUPABASE_URL}
 SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
 ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
 EOF
-  echo "  → .env created"
+  )
+  chmod 600 .env
+  echo "  → .env created (mode 600)"
 else
-  echo "  → .env already exists, skipping"
+  chmod 600 .env 2>/dev/null || true
+  echo "  → .env already exists, skipping (ensured mode 600)"
 fi
 
 # 4. Create tables
