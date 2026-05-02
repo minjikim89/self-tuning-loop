@@ -8,6 +8,40 @@ interface VersionScore {
   createdAt: string;
 }
 
+interface RatingRow {
+  guidelines_version: number;
+  feedback_rating: number;
+}
+
+const PAGE_SIZE = 1000;
+
+/**
+ * Iterate every drafts row matching (domain, feedback_rating IS NOT NULL).
+ * Supabase caps a single select at PAGE_SIZE (default 1000), so without
+ * paging the score report silently truncates for active domains.
+ */
+async function* iterateRatedDrafts(domain: string): AsyncGenerator<RatingRow> {
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('drafts')
+      .select('guidelines_version, feedback_rating')
+      .eq('domain', domain)
+      .not('feedback_rating', 'is', null)
+      .order('id', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) {
+      throw new Error(`Failed to fetch drafts: ${error.message}`);
+    }
+    if (!data || data.length === 0) return;
+
+    for (const row of data) yield row as RatingRow;
+    if (data.length < PAGE_SIZE) return;
+    from += PAGE_SIZE;
+  }
+}
+
 /**
  * Track quality score across guideline versions.
  * Compares average feedback_rating per guidelines_version to show
@@ -25,20 +59,9 @@ export async function getQualityScores(domain: string): Promise<VersionScore[]> 
     throw new Error(`Failed to fetch guidelines: ${gError?.message}`);
   }
 
-  // Get average rating per guidelines_version
-  const { data: drafts, error: dError } = await supabase
-    .from('drafts')
-    .select('guidelines_version, feedback_rating')
-    .eq('domain', domain)
-    .not('feedback_rating', 'is', null);
-
-  if (dError) {
-    throw new Error(`Failed to fetch drafts: ${dError.message}`);
-  }
-
-  // Aggregate ratings by version
+  // Aggregate ratings by version, paging through every rated draft.
   const ratingsByVersion = new Map<number, number[]>();
-  for (const d of drafts || []) {
+  for await (const d of iterateRatedDrafts(domain)) {
     const v = d.guidelines_version;
     if (!ratingsByVersion.has(v)) ratingsByVersion.set(v, []);
     ratingsByVersion.get(v)!.push(d.feedback_rating);
