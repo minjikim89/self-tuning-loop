@@ -28,9 +28,29 @@ export async function evolveGuidelines(domain: string, dryRun = false) {
     return null;
   }
 
-  // 2. Filter Safe patterns only
+  // 1b. Crash recovery: a previous run may have inserted the guidelines row
+  // but failed to flip applied=true. Detect via analysis_run_id and short-circuit
+  // before generating a duplicate v+2 with the same patterns.
+  const { data: existing } = await supabase
+    .from('guidelines')
+    .select('version')
+    .eq('analysis_run_id', run.id)
+    .maybeSingle();
+
+  if (existing) {
+    console.log(
+      `${domain}: analysis ${run.id} already produced v${existing.version}; ` +
+      `marking applied (recovered from a prior partial run)`
+    );
+    const { error } = await supabase.from('analysis_runs').update({ applied: true }).eq('id', run.id);
+    if (error) console.error(`Warning: failed to mark run as applied: ${error.message}`);
+    return { version: existing.version, addedPatterns: 0, recovered: true };
+  }
+
+  // 2. Filter Safe patterns only. Normalize the LLM-emitted classification field
+  // because some completions return 'Safe'/'SAFE' instead of the documented 'safe'.
   const safePatterns = (run.patterns?.patterns || [])
-    .filter((p: any) => p.classification === 'safe');
+    .filter((p: any) => String(p?.classification ?? '').trim().toLowerCase() === 'safe');
 
   if (safePatterns.length === 0) {
     console.log(`${domain}: no Safe patterns, marking run as applied`);

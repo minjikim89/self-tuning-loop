@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { createHash } from 'crypto';
 import { supabase } from './supabase.js';
 import { callLLM } from './llm.js';
 
@@ -57,7 +58,13 @@ export async function analyzeDiffs(domain: string, lookbackDays = 7) {
   try {
     patterns = JSON.parse(jsonMatch[1] || result);
   } catch {
-    console.error(`${domain}: LLM returned invalid JSON, raw response:\n${result.slice(0, 500)}`);
+    // Don't log the raw response — it may contain user-derived text from the
+    // diff summaries. Surface a fingerprint instead so the failed payload can
+    // still be reproduced from a controlled environment if needed.
+    const sha = createHash('sha256').update(result).digest('hex').slice(0, 12);
+    console.error(
+      `${domain}: LLM returned invalid JSON. length=${result.length} sha256=${sha}`
+    );
     return null;
   }
 
