@@ -83,8 +83,8 @@ graph LR
 |---|---|---|---|
 | **Generate** | 사용자 앱 | 사용자 코드 + LLM | `guidelines/{domain}` 최신 버전으로 초안 생성 |
 | **Capture** | 사용자 편집 | `capture.ts` | 두 버전 저장, diff 요약 |
-| **Analyze** | 크론 (주간) | `analyze.ts` | LLM이 3회 이상 반복 패턴 추출 |
-| **Evolve** | 크론 (analyze 후) | `evolve.ts` | Safe 패턴을 새 버전 가이드라인에 추가 |
+| **Analyze** | 주간 (사용자 스케줄러) | `analyze.ts` | LLM이 3회 이상 반복 패턴 추출 |
+| **Evolve** | analyze 직후 | `evolve.ts` | Safe 패턴을 새 버전 가이드라인에 추가 |
 | **Score** | 수동 실행 | `score.ts` | 버전별 평균 피드백 평점 비교 |
 
 ## Fine-tuning, DSPy, TextGrad, OPRO 대신 이걸 쓰는 이유
@@ -165,10 +165,9 @@ self-tuning-loop/
 │   ├── score.ts                       # 버전별 품질 추세
 │   ├── llm.ts                         # 프로바이더 추상화 (LLMTruncatedError)
 │   └── supabase.ts                    # service-role 클라이언트
-├── prompts/
-│   ├── analyze-diffs.md               # Safe/Risky 분류기 튜닝
-│   └── evolve-guidelines.md
-└── .github/workflows/self-tune.yml    # 주간 크론, 기본 dry-run
+└── prompts/
+    ├── analyze-diffs.md               # Safe/Risky 분류기 튜닝
+    └── evolve-guidelines.md
 ```
 
 ## 적합한 사용자

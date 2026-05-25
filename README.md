@@ -83,8 +83,8 @@ graph LR
 |------|---------|-----------|--------------|
 | **Generate** | Your app | Your code + LLM | Generate a draft using `guidelines/{domain}` v_latest |
 | **Capture** | User edits | `capture.ts` | Store both versions, summarize the diff |
-| **Analyze** | Cron (weekly) | `analyze.ts` | LLM finds patterns repeating 3+ times |
-| **Evolve** | Cron (after analyze) | `evolve.ts` | Append Safe patterns to a new guideline version |
+| **Analyze** | Weekly (your scheduler) | `analyze.ts` | LLM finds patterns repeating 3+ times |
+| **Evolve** | After analyze | `evolve.ts` | Append Safe patterns to a new guideline version |
 | **Score** | On demand | `score.ts` | Compare avg feedback rating per version |
 
 ## Why Not Fine-Tuning, DSPy, TextGrad, OPRO?
@@ -165,10 +165,9 @@ self-tuning-loop/
 │   ├── score.ts                       # quality trend across versions
 │   ├── llm.ts                         # provider abstraction (LLMTruncatedError)
 │   └── supabase.ts                    # service-role client
-├── prompts/
-│   ├── analyze-diffs.md               # tune the Safe/Risky classifier here
-│   └── evolve-guidelines.md
-└── .github/workflows/self-tune.yml    # weekly cron, dry-run by default
+└── prompts/
+    ├── analyze-diffs.md               # tune the Safe/Risky classifier here
+    └── evolve-guidelines.md
 ```
 
 ## Who This Is For
